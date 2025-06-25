@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="appTitle">الباحث الثقافي بالذكاء الاصطناعي</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: "Inter", sans-serif;
+            background-color: #f0f2f5;
+        }
+        /* Default direction and text alignment for LTR languages */
+        body.ltr {
+            direction: ltr;
+            text-align: left;
+        }
+        /* Direction and text alignment for RTL languages */
+        body.rtl {
+            direction: rtl;
+            text-align: right;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 lg:p-8 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-6 sm:p-8 lg:p-10 rounded-xl shadow-lg max-w-2xl w-full">
+        <h1 id="mainHeading" class="text-3xl sm:text-4xl font-bold text-center mb-6 text-gray-800">الباحث الثقافي بالذكاء الاصطناعي</h1>
+        <p id="tagline" class="text-gray-600 text-center mb-8">اكتب أي موضوع ثقافي تود معرفة المزيد عنه، وسيقوم الذكاء الاصطناعي بتوليد معلومات لك.</p>
+
+        <div class="mb-6">
+            <label for="searchInput" id="inputLabel" class="block text-gray-700 text-sm font-medium mb-2">أدخل موضوع البحث:</label>
+            <input type="text" id="searchInput" placeholder="مثال: تاريخ الفن، الأدب العربي، الموسيقى الكلاسيكية"
+                   class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200">
+        </div>
+
+        <button id="searchButton"
+                class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 flex items-center justify-center">
+            <svg id="loadingSpinner" class="animate-spin h-5 w-5 text-white mr-3 hidden" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span id="buttonText">ابحث بالذكاء الاصطناعي</span>
+        </button>
+
+        <div id="results" class="mt-8 p-4 bg-gray-50 border border-gray-200 rounded-lg min-h-[150px] overflow-auto text-gray-800">
+            <p id="initialResultsMessage" class="text-gray-500 text-center">النتائج ستظهر هنا...</p>
+        </div>
+
+        <!-- Custom message box for alerts -->
+        <div id="messageBox" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+            <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full text-center">
+                <h3 id="messageBoxTitle" class="text-xl font-bold mb-4"></h3>
+                <p id="messageBoxContent" class="text-gray-700 mb-6"></p>
+                <button id="messageBoxCloseButton" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 w-full"></button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Get references to DOM elements
+        const appTitle = document.getElementById('appTitle');
+        const mainHeading = document.getElementById('mainHeading');
+        const tagline = document.getElementById('tagline');
+        const inputLabel = document.getElementById('inputLabel');
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const resultsDiv = document.getElementById('results');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const buttonText = document.getElementById('buttonText');
+        const initialResultsMessage = document.getElementById('initialResultsMessage');
+        const messageBox = document.getElementById('messageBox');
+        const messageBoxTitle = document.getElementById('messageBoxTitle');
+        const messageBoxContent = document.getElementById('messageBoxContent');
+        const messageBoxCloseButton = document.getElementById('messageBoxCloseButton');
+
+        // Language dictionary
+        const translations = {
+            ar: {
+                appTitle: "الباحث الثقافي بالذكاء الاصطناعي",
+                mainHeading: "الباحث الثقافي بالذكاء الاصطناعي",
+                tagline: "اكتب أي موضوع ثقافي تود معرفة المزيد عنه، وسيقوم الذكاء الاصطناعي بتوليد معلومات لك.",
+                inputLabel: "أدخل موضوع البحث:",
+                searchInputPlaceholder: "مثال: تاريخ الفن، الأدب العربي، الموسيقى الكلاسيكية",
+                searchButtonText: "ابحث بالذكاء الاصطناعي",
+                loadingTextGenerating: "جاري توليد المعلومات...",
+                loadingTextFetching: "جاري جلب المعلومات من الذكاء الاصطناعي...",
+                initialResultsMessage: "النتائج ستظهر هنا...",
+                errorMessageInputEmptyTitle: "خطأ في الإدخال",
+                errorMessageInputEmptyContent: "الرجاء إدخال موضوع للبحث عنه.",
+                errorMessageNoInfoTitle: "لم يتم العثور على معلومات",
+                errorMessageNoInfoContent: "الذكاء الاصطناعي لم يتمكن من توليد استجابة.",
+                errorMessageFetchingTitle: "خطأ",
+                errorMessageFetchingContent: "حدث خطأ أثناء جلب المعلومات من الذكاء الاصطناعي:",
+                resultsHeading: "معلومات حول:",
+                messageBoxClose: "إغلاق"
+            },
+            en: {
+                appTitle: "AI Cultural Researcher",
+                mainHeading: "AI Cultural Researcher",
+                tagline: "Type any cultural topic you'd like to know more about, and the AI will generate information for you.",
+                inputLabel: "Enter search topic:",
+                searchInputPlaceholder: "Example: History of Art, Arabic Literature, Classical Music",
+                searchButtonText: "Search with AI",
+                loadingTextGenerating: "Generating information...",
+                loadingTextFetching: "Fetching information from AI...",
+                initialResultsMessage: "Results will appear here...",
+                errorMessageInputEmptyTitle: "Input Error",
+                errorMessageInputEmptyContent: "Please enter a topic to search for.",
+                errorMessageNoInfoTitle: "No information found",
+                errorMessageNoInfoContent: "The AI could not generate a response.",
+                errorMessageFetchingTitle: "Error",
+                errorMessageFetchingContent: "An error occurred while fetching information from AI:",
+                resultsHeading: "Information about:",
+                messageBoxClose: "Close"
+            }
+        };
+
+        // Determine the user's preferred language
+        let userLang = navigator.language.split('-')[0]; // Get primary language code (e.g., 'en', 'ar')
+        if (!translations[userLang]) {
+            userLang = 'en'; // Default to English if user's language is not supported
+        }
+
+        // Apply translations
+        function applyTranslations() {
+            const lang = translations[userLang];
+            appTitle.textContent = lang.appTitle;
+            mainHeading.textContent = lang.mainHeading;
+            tagline.textContent = lang.tagline;
+            inputLabel.textContent = lang.inputLabel;
+            searchInput.placeholder = lang.searchInputPlaceholder;
+            buttonText.textContent = lang.searchButtonText;
+            initialResultsMessage.textContent = lang.initialResultsMessage;
+            messageBoxCloseButton.textContent = lang.messageBoxClose;
+
+            // Set body direction and text alignment based on language
+            if (userLang === 'ar') {
+                document.body.classList.remove('ltr');
+                document.body.classList.add('rtl');
+                document.documentElement.lang = 'ar';
+            } else {
+                document.body.classList.remove('rtl');
+                document.body.classList.add('ltr');
+                document.documentElement.lang = 'en';
+            }
+        }
+
+        // Initial application of translations
+        applyTranslations();
+
+        // Function to show custom message box
+        function showMessageBox(titleKey, contentKey) {
+            const lang = translations[userLang];
+            messageBoxTitle.textContent = lang[titleKey];
+            messageBoxContent.textContent = lang[contentKey];
+            messageBox.classList.remove('hidden');
+        }
+
+        // Event listener for the close button of the message box
+        messageBoxCloseButton.addEventListener('click', () => {
+            messageBox.classList.add('hidden');
+        });
+
+        // Event listener for the search button
+        searchButton.addEventListener('click', async () => {
+            const query = searchInput.value.trim(); // Get user input and trim whitespace
+            const lang = translations[userLang];
+
+            // Check if the input is empty
+            if (query === '') {
+                showMessageBox('errorMessageInputEmptyTitle', 'errorMessageInputEmptyContent');
+                return;
+            }
+
+            // Show loading spinner and disable the button
+            loadingSpinner.classList.remove('hidden');
+            buttonText.textContent = lang.loadingTextGenerating; // Update button text to indicate generation
+            searchButton.disabled = true;
+            resultsDiv.innerHTML = `<p class="text-gray-500 text-center">${lang.loadingTextFetching}</p>`;
+
+            try {
+                // Prepare the prompt for the LLM in the detected language
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: `${lang.resultsHeading} ${query} in ${userLang}.` }] });
+
+                const payload = { contents: chatHistory };
+                // API key is intentionally left empty; Canvas will provide it at runtime.
+                const apiKey = "AIzaSyCkN_5SuUfS_21mlzQ0BL3XE74Eh36W2Jw"; // Ensure this is not hardcoded if it comes from an external source
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                // Make the fetch request to the LLM API
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json(); // Await the JSON parsing
+
+                // Check if the response contains content
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    resultsDiv.innerHTML = `
+                        <h2 class="text-2xl font-semibold mb-3">${lang.resultsHeading} ${query}</h2>
+                        <p class="text-lg leading-relaxed">${text}</p>
+                    `;
+                } else {
+                    // Handle cases where the LLM response structure is unexpected or content is missing
+                    resultsDiv.innerHTML = `<p class="text-red-500 text-center">${lang.errorMessageNoInfoContent}</p>`;
+                    showMessageBox('errorMessageNoInfoTitle', 'errorMessageNoInfoContent');
+                }
+
+            } catch (error) {
+                // Handle any errors during the fetch or processing
+                console.error('Error fetching cultural information from AI:', error);
+                resultsDiv.innerHTML = `<p class="text-red-500 text-center">${lang.errorMessageFetchingContent} ${error.message}</p>`;
+                showMessageBox('errorMessageFetchingTitle', 'errorMessageFetchingContent');
+            } finally {
+                // Hide loading spinner and enable the button
+                loadingSpinner.classList.add('hidden');
+                buttonText.textContent = lang.searchButtonText;
+                searchButton.disabled = false;
+            }
+        });
+
+        // Optional: Allow searching with Enter key
+        searchInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                searchButton.click();
+            }
+        });
+    </script>
+</body>
+</html>
